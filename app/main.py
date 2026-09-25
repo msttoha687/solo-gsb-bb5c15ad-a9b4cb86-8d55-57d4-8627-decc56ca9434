@@ -12,12 +12,15 @@ from pydantic import BaseModel, Field
 
 from .alignment import GAP_COST, align, align_with_anchors, normalize_anchors
 from .parsers import parse_script, parse_srt
+from .relayout import build_relayout_srt, relayout_subtitles
 from .retime import CalibPoint, build_srt, parse_timecode, retime_subtitles
 from .textnorm import normalize_text
 
 MAX_ITEMS = 2000          # 每侧条目数上限，防止 DP 规模过大导致请求过久
 MAX_RAW_BYTES = 2 * 1024 * 1024
 MAX_POINTS = 500          # 重定时校准点数量上限
+MIN_LINE_WIDTH = 12       # 断行排版每行最大显示宽度下限
+MAX_LINE_WIDTH = 60       # 断行排版每行最大显示宽度上限
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = BASE_DIR / "static"
@@ -275,6 +278,81 @@ def api_retime_srt(req: RetimeRequest):
         media_type="text/plain; charset=utf-8",
         headers={
             "Content-Disposition": 'attachment; filename="retimed.srt"'
+        },
+    )
+
+
+class RelayoutRequest(BaseModel):
+    srt: str = Field(default="", description="原 SRT 字幕")
+    max_width: int = Field(
+        default=30,
+        ge=MIN_LINE_WIDTH,
+        le=MAX_LINE_WIDTH,
+        description="每行最大显示宽度（12~60，东亚宽字符计 2，其余计 1）",
+    )
+
+
+def _build_relayout_rows(srt_text: str, max_width: int):
+    if not MIN_LINE_WIDTH <= max_width <= MAX_LINE_WIDTH:
+        raise HTTPException(
+            400,
+            f"每行最大显示宽度须在 {MIN_LINE_WIDTH}~{MAX_LINE_WIDTH} 之间",
+        )
+    if len(srt_text.encode("utf-8", errors="ignore")) > MAX_RAW_BYTES:
+        raise HTTPException(400, "SRT 超过 2 MB 大小限制")
+    try:
+        subs = parse_srt(srt_text)
+    except ValueError as exc:
+        raise HTTPException(400, f"SRT 解析失败：{exc}") from exc
+    if not subs:
+        raise HTTPException(400, "SRT 内容为空，请粘贴字幕")
+    if len(subs) > MAX_ITEMS:
+        raise HTTPException(
+            400, f"字幕块数超过 {MAX_ITEMS} 的上限，请拆分后再排版"
+        )
+    return relayout_subtitles(subs, max_width)
+
+
+def _relayout_row_json(r) -> dict:
+    return {
+        "index": r.index,
+        "start_tc": r.start_tc,
+        "end_tc": r.end_tc,
+        "original_text": r.original_text,
+        "result_text": r.result_text,
+        "line_count": r.line_count,
+        "status": r.status,
+        "reason": r.reason,
+    }
+
+
+@app.post("/api/relayout")
+def api_relayout(req: RelayoutRequest):
+    rows = _build_relayout_rows(req.srt, req.max_width)
+    counts = {"single": 0, "wrapped": 0, "manual": 0}
+    for r in rows:
+        counts[r.status] += 1
+    return {
+        "summary": {
+            "total": len(rows),
+            "max_width": req.max_width,
+            "single": counts["single"],
+            "wrapped": counts["wrapped"],
+            "manual": counts["manual"],
+        },
+        "rows": [_relayout_row_json(r) for r in rows],
+    }
+
+
+@app.post("/api/relayout.srt")
+def api_relayout_srt(req: RelayoutRequest):
+    rows = _build_relayout_rows(req.srt, req.max_width)
+    data = build_relayout_srt(rows).encode("utf-8")
+    return Response(
+        content=data,
+        media_type="text/plain; charset=utf-8",
+        headers={
+            "Content-Disposition": 'attachment; filename="relayout.srt"'
         },
     )
 

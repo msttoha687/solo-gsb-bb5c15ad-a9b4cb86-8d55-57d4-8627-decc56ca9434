@@ -1,22 +1,27 @@
 "use strict";
 
-// SRT 时间轴重定时：选项卡切换 + 校准点分段线性映射的预览与下载
+// SRT 时间轴重定时 + 页签切换（对齐 / 重定时 / 断行排版三个页签共用）
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  const tabAlign = $("tabAlign");
-  const tabRetime = $("tabRetime");
-  const viewAlign = $("viewAlign");
-  const viewRetime = $("viewRetime");
+  const tabButtons = Array.from(document.querySelectorAll(".tab[data-tab]"));
+  const views = {
+    align: $("viewAlign"),
+    retime: $("viewRetime"),
+    relayout: $("viewRelayout"),
+  };
 
-  function switchTab(showRetime) {
-    tabAlign.classList.toggle("active", !showRetime);
-    tabRetime.classList.toggle("active", showRetime);
-    viewAlign.classList.toggle("hidden", showRetime);
-    viewRetime.classList.toggle("hidden", !showRetime);
+  function switchTab(name) {
+    for (const btn of tabButtons) {
+      btn.classList.toggle("active", btn.dataset.tab === name);
+    }
+    for (const [key, view] of Object.entries(views)) {
+      view.classList.toggle("hidden", key !== name);
+    }
   }
-  tabAlign.addEventListener("click", () => switchTab(false));
-  tabRetime.addEventListener("click", () => switchTab(true));
+  for (const btn of tabButtons) {
+    btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+  }
 
   const els = {
     srt: $("rtSrt"),

@@ -9,13 +9,14 @@
 <body>
 <header class="topbar">
   <h1>字幕校稿对齐</h1>
-  <p class="subtitle">逐行对白稿 × SRT 全局单调对齐 · SRT 时间轴重定时（校准点分段线性映射）</p>
+  <p class="subtitle">逐行对白稿 × SRT 全局单调对齐 · SRT 时间轴重定时（校准点分段线性映射）· SRT 断行排版（宽度约束下枚举最优断点）</p>
 </header>
 
 <main>
   <nav class="tabs">
-    <button type="button" id="tabAlign" class="tab active">字幕校稿对齐</button>
-    <button type="button" id="tabRetime" class="tab">SRT 时间轴重定时</button>
+    <button type="button" id="tabAlign" class="tab active" data-tab="align">字幕校稿对齐</button>
+    <button type="button" id="tabRetime" class="tab" data-tab="retime">SRT 时间轴重定时</button>
+    <button type="button" id="tabRelayout" class="tab" data-tab="relayout">SRT 断行排版</button>
   </nav>
 
   <div id="viewAlign">
@@ -126,9 +127,67 @@
     </table>
   </section>
   </div><!-- /viewRetime -->
+
+  <div id="viewRelayout" class="hidden">
+  <section class="input-grid">
+    <div class="pane">
+      <div class="pane-head">
+        <label for="rlSrt">SRT 字幕（保留时间码，仅调整正文换行）</label>
+        <button type="button" class="ghost" id="rlSample">填入示例</button>
+      </div>
+      <textarea id="rlSrt" spellcheck="false"
+        placeholder="粘贴标准 SRT&#10;1&#10;00:00:01,000 --> 00:00:03,000&#10;你好，世界！"></textarea>
+    </div>
+    <div class="pane pane-help">
+      <div class="pane-head"><label>排版规则</label></div>
+      <ul class="rules">
+        <li>每个字幕块正文排成<b>最多两行</b>，一行放得下则保持一行。</li>
+        <li>每行最大显示宽度 <b>12～60</b>；东亚宽字符计 2，其余字符计 1，组合字符计 0 且不与前字拆开。</li>
+        <li>连续拉丁字母构成的单词不可拆分；空白处与词组之间为合法断点。</li>
+        <li>枚举全部合法断点，按<b>句末标点优先、两行宽度均衡</b>选优，不做固定字数贪心截断。</li>
+        <li>无合法两行排法的块<b>保留原正文</b>并标记「需人工处理」。</li>
+        <li>下载 SRT 时<b>原序号、时间码与文字内容不变</b>，仅换行位置可能变化。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="controls">
+    <label class="gap-field">每行最大显示宽度
+      <input type="number" id="rlWidth" value="30" min="12" max="60" step="1">
+    </label>
+    <button type="button" id="rlRunBtn" class="primary">开始排版</button>
+    <button type="button" id="rlClearBtn" class="ghost">清空</button>
+    <span id="rlStatus" class="status" role="status"></span>
+  </section>
+
+  <section id="rlSummary" class="summary hidden">
+    <span class="chip chip-match">单行 <b id="rlCntSingle">0</b></span>
+    <span class="chip chip-wrapped">两行 <b id="rlCntWrapped">0</b></span>
+    <span class="chip chip-manual">需人工处理 <b id="rlCntManual">0</b></span>
+    <span class="chip">字幕块 <b id="rlCnt">0</b></span>
+    <span class="chip">每行宽度上限 <b id="rlMaxWidth">30</b></span>
+    <button type="button" id="rlDownloadBtn" class="ghost">下载 SRT</button>
+  </section>
+
+  <section id="rlResultWrap" class="result-wrap hidden">
+    <table id="rlTable">
+      <thead>
+        <tr>
+          <th class="col-rl-status">状态</th>
+          <th class="col-rt-idx">#</th>
+          <th class="col-tc">时间码</th>
+          <th class="col-rl-text">原文</th>
+          <th class="col-rl-text">排版结果</th>
+        </tr>
+      </thead>
+      <tbody id="rlBody"></tbody>
+    </table>
+  </section>
+  </div><!-- /viewRelayout -->
 </main>
 
 <script src="/static/app.js"></script>
 <script src="/static/retime.js"></script>
+<script src="/static/relayout.js"></script>
 </body>
 </html>
