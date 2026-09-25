@@ -212,6 +212,46 @@ tr.row-anchor td:first-child { border-left: 4px solid var(--anchor-border); }
 .cost-low { color: #1e7d3a; }
 .dim { color: #b6bcc4; }
 
+/* SRT 断行排版 */
+.rw-hint { font-size: 12px; color: var(--muted); }
+.rw-help-pane ul.rw-help {
+  margin: 0;
+  padding: 10px 14px 12px 28px;
+  font-size: 13px;
+  line-height: 1.9;
+  color: #374151;
+}
+.rw-help-pane textarea { display: none; }
+.col-rw-status { width: 92px; }
+.cell-rw-text { white-space: normal; min-width: 200px; }
+.ln-break {
+  color: #9aa3ad;
+  font-size: 11px;
+  margin: 0 2px;
+}
+.rw-w {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 1px 8px;
+  border-radius: 4px;
+  background: #eef2ff;
+  color: #3949ab;
+  font-size: 11px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+.rw-reason {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #c5221f;
+}
+.badge-rw-done { background: var(--brand); color: #fff; }
+.badge-rw-same { background: #e5e7eb; color: #4b5563; }
+tr.row-rw-rewrapped { background: #f0f6ff; }
+tr.row-rw-rewrapped td:first-child { border-left: 4px solid var(--brand); }
+tr.row-rw-unchanged td:first-child { border-left: 4px solid #cbd2d9; }
+tr.row-rw-manual { background: var(--missing-script-bg); }
+tr.row-rw-manual td:first-child { border-left: 4px solid var(--missing-script-border); }
+
 .hidden { display: none; }
 
 @media (max-width: 860px) {

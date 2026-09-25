@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from .alignment import GAP_COST, align, align_with_anchors, normalize_anchors
 from .parsers import parse_script, parse_srt
 from .retime import CalibPoint, build_srt, parse_timecode, retime_subtitles
+from .rewrap import MAX_WIDTH, MIN_WIDTH, build_rewrapped_srt, rewrap_subtitles
 from .textnorm import normalize_text
 
 MAX_ITEMS = 2000          # 每侧条目数上限，防止 DP 规模过大导致请求过久
@@ -275,6 +276,74 @@ def api_retime_srt(req: RetimeRequest):
         media_type="text/plain; charset=utf-8",
         headers={
             "Content-Disposition": 'attachment; filename="retimed.srt"'
+        },
+    )
+
+
+class RewrapRequest(BaseModel):
+    srt: str = Field(default="", description="待断行排版的 SRT 字幕")
+    max_width: int = Field(
+        default=30,
+        ge=MIN_WIDTH,
+        le=MAX_WIDTH,
+        description=f"每行最大显示宽度（{MIN_WIDTH}~{MAX_WIDTH}）",
+    )
+
+
+def _build_rewrap_rows(srt_text: str, max_width: int):
+    if len(srt_text.encode("utf-8", errors="ignore")) > MAX_RAW_BYTES:
+        raise HTTPException(400, "SRT 超过 2 MB 大小限制")
+    try:
+        subs = parse_srt(srt_text)
+    except ValueError as exc:
+        raise HTTPException(400, f"SRT 解析失败：{exc}") from exc
+    if not subs:
+        raise HTTPException(400, "SRT 内容为空，请粘贴字幕")
+    if len(subs) > MAX_ITEMS:
+        raise HTTPException(
+            400, f"字幕块数超过 {MAX_ITEMS} 的上限，请拆分后再断行排版"
+        )
+    return rewrap_subtitles(subs, max_width)
+
+
+def _rewrap_row_payload(r) -> dict:
+    return {
+        "index": r.index,
+        "start_tc": r.start_tc,
+        "end_tc": r.end_tc,
+        "original_text": "\n".join(r.original_lines),
+        "text": "\n".join(r.body_lines),
+        "lines": list(r.body_lines),
+        "status": r.status,
+        "reason": r.reason,
+        "width1": r.width1,
+        "width2": r.width2,
+        "changed": r.changed,
+    }
+
+
+@app.post("/api/rewrap")
+def api_rewrap(req: RewrapRequest):
+    rows = _build_rewrap_rows(req.srt, req.max_width)
+    summary = {
+        "total": len(rows),
+        "rewrapped": sum(1 for r in rows if r.status == "rewrapped"),
+        "unchanged": sum(1 for r in rows if r.status == "unchanged"),
+        "manual": sum(1 for r in rows if r.status == "manual"),
+        "max_width": req.max_width,
+    }
+    return {"summary": summary, "rows": [_rewrap_row_payload(r) for r in rows]}
+
+
+@app.post("/api/rewrap.srt")
+def api_rewrap_srt(req: RewrapRequest):
+    rows = _build_rewrap_rows(req.srt, req.max_width)
+    data = build_rewrapped_srt(rows).encode("utf-8")
+    return Response(
+        content=data,
+        media_type="text/plain; charset=utf-8",
+        headers={
+            "Content-Disposition": 'attachment; filename="rewrapped.srt"'
         },
     )
 

@@ -6,17 +6,22 @@
 
   const tabAlign = $("tabAlign");
   const tabRetime = $("tabRetime");
+  const tabRewrap = $("tabRewrap");
   const viewAlign = $("viewAlign");
   const viewRetime = $("viewRetime");
+  const viewRewrap = $("viewRewrap");
 
-  function switchTab(showRetime) {
-    tabAlign.classList.toggle("active", !showRetime);
-    tabRetime.classList.toggle("active", showRetime);
-    viewAlign.classList.toggle("hidden", showRetime);
-    viewRetime.classList.toggle("hidden", !showRetime);
+  function switchTab(which) {
+    tabAlign.classList.toggle("active", which === "align");
+    tabRetime.classList.toggle("active", which === "retime");
+    tabRewrap.classList.toggle("active", which === "rewrap");
+    viewAlign.classList.toggle("hidden", which !== "align");
+    viewRetime.classList.toggle("hidden", which !== "retime");
+    viewRewrap.classList.toggle("hidden", which !== "rewrap");
   }
-  tabAlign.addEventListener("click", () => switchTab(false));
-  tabRetime.addEventListener("click", () => switchTab(true));
+  tabAlign.addEventListener("click", () => switchTab("align"));
+  tabRetime.addEventListener("click", () => switchTab("retime"));
+  tabRewrap.addEventListener("click", () => switchTab("rewrap"));
 
   const els = {
     srt: $("rtSrt"),

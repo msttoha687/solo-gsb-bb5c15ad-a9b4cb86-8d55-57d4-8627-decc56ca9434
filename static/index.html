@@ -9,13 +9,14 @@
 <body>
 <header class="topbar">
   <h1>字幕校稿对齐</h1>
-  <p class="subtitle">逐行对白稿 × SRT 全局单调对齐 · SRT 时间轴重定时（校准点分段线性映射）</p>
+  <p class="subtitle">逐行对白稿 × SRT 全局单调对齐 · SRT 时间轴重定时（校准点分段线性映射） · SRT 断行排版（句末标点优先、两行均衡）</p>
 </header>
 
 <main>
   <nav class="tabs">
     <button type="button" id="tabAlign" class="tab active">字幕校稿对齐</button>
     <button type="button" id="tabRetime" class="tab">SRT 时间轴重定时</button>
+    <button type="button" id="tabRewrap" class="tab">SRT 断行排版</button>
   </nav>
 
   <div id="viewAlign">
@@ -126,9 +127,67 @@
     </table>
   </section>
   </div><!-- /viewRetime -->
+
+  <div id="viewRewrap" class="hidden">
+  <section class="input-grid">
+    <div class="pane">
+      <div class="pane-head">
+        <label for="rwSrt">SRT 字幕（保持时间码，仅调整正文换行）</label>
+        <button type="button" class="ghost" id="rwSample">填入示例</button>
+      </div>
+      <textarea id="rwSrt" spellcheck="false"
+        placeholder="粘贴标准 SRT&#10;1&#10;00:00:01,000 --> 00:00:03,000&#10;这是一行比较长需要重新断行的中文字幕正文"></textarea>
+    </div>
+    <div class="pane rw-help-pane">
+      <div class="pane-head"><label>排版规则</label></div>
+      <ul class="rw-help">
+        <li>每个字幕块排成<b>最多两行</b>，每行显示宽度不超过上限。</li>
+        <li>东亚宽字符计 <b>2</b>，其余字符计 <b>1</b>，组合字符不与前字拆开。</li>
+        <li>连续拉丁字母构成的<b>单词不可拆分</b>；枚举全部合法断点，
+            按<b>句末标点优先</b>、<b>两行宽度均衡</b>选最优，不做固定字数贪心截断。</li>
+        <li>无合法两行排法的块（如超长单词）保留原正文并标记
+            <b>人工处理</b>；下载时保持原时间码与序号，仅替换换行。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="controls">
+    <label class="gap-field">每行最大显示宽度
+      <input type="number" id="rwWidth" value="30" min="12" max="60" step="1">
+    </label>
+    <span class="rw-hint">（12～60，宽字符计 2）</span>
+    <button type="button" id="rwRunBtn" class="primary">开始断行排版</button>
+    <button type="button" id="rwClearBtn" class="ghost">清空</button>
+    <span id="rwStatus" class="status" role="status"></span>
+  </section>
+
+  <section id="rwSummary" class="summary hidden">
+    <span class="chip chip-match">已排版 <b id="rwCntDone">0</b></span>
+    <span class="chip">无需调整 <b id="rwCntSame">0</b></span>
+    <span class="chip chip-missing-script">人工处理 <b id="rwCntManual">0</b></span>
+    <span class="chip">字幕块 <b id="rwCnt">0</b></span>
+    <button type="button" id="rwDownloadBtn" class="ghost">下载 SRT</button>
+  </section>
+
+  <section id="rwResultWrap" class="result-wrap hidden">
+    <table id="rwTable">
+      <thead>
+        <tr>
+          <th class="col-rt-idx">序号</th>
+          <th class="col-tc">时间码</th>
+          <th>原文</th>
+          <th>排版结果（行宽）</th>
+          <th class="col-rw-status">状态</th>
+        </tr>
+      </thead>
+      <tbody id="rwBody"></tbody>
+    </table>
+  </section>
+  </div><!-- /viewRewrap -->
 </main>
 
 <script src="/static/app.js"></script>
 <script src="/static/retime.js"></script>
+<script src="/static/rewrap.js"></script>
 </body>
 </html>
